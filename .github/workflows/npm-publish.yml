@@ -1,0 +1,52 @@
+# Runs tests, then publishes the package to npm when a release is created.
+# https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+
+name: Publish React SDK
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Clean Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+      - name: Update npm
+        run: npm install -g npm@latest
+      - name: Clean Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+      # The package's `exports` map and `files` field control what ships,
+      # so publish straight from the package root. Auth uses the org-level
+      # NPM_TOKEN secret; --provenance is signed via the id-token permission.
+      - name: Publish
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
