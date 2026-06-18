@@ -44,9 +44,8 @@ jobs:
       - name: Build
         run: npm run build
       # The package's `exports` map and `files` field control what ships,
-      # so publish straight from the package root. Auth uses the org-level
-      # NPM_TOKEN secret; --provenance is signed via the id-token permission.
+      # so publish straight from the package root. Auth uses npm OIDC trusted
+      # publishing (no token) via the `id-token: write` permission above, which
+      # also signs provenance automatically — same approach as the node-sdk.
       - name: Publish
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
