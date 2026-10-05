@@ -13,4 +13,4 @@ export { createRocketflagClient } from "./core/client";
 export { APIError, NetworkError, InvalidResponseError } from "./core/errors";
 
 // Types
-export type { FlagStatus, UserContext, CacheOptions, CallOptions, RocketFlagClient } from "./core/types";
+export type { FlagStatus, ContextValue, UserContext, CacheOptions, CallOptions, RocketFlagClient } from "./core/types";

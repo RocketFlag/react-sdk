@@ -15,9 +15,14 @@ export interface RocketFlagProviderProps {
    */
   cacheTtlSeconds?: number;
   /**
+   * The most responses the shared cache holds before it evicts the least
+   * recently used one. Defaults to 10,000.
+   */
+  cacheMaxEntries?: number;
+  /**
    * Provide a pre-built client instead of constructing one from the props above.
    * Useful for testing or advanced/custom setups. When set, `version`, `apiUrl`,
-   * and `cacheTtlSeconds` are ignored.
+   * `cacheTtlSeconds` and `cacheMaxEntries` are ignored.
    */
   client?: RocketFlagClient;
 }
@@ -27,16 +32,13 @@ export const RocketFlagProvider = ({
   version,
   apiUrl,
   cacheTtlSeconds,
+  cacheMaxEntries,
   client,
 }: RocketFlagProviderProps) => {
   const value = useMemo<RocketFlagClient>(() => {
     if (client) return client;
-    return createRocketflagClient(
-      version,
-      apiUrl,
-      cacheTtlSeconds !== undefined ? { ttlSeconds: cacheTtlSeconds } : {},
-    );
-  }, [client, version, apiUrl, cacheTtlSeconds]);
+    return createRocketflagClient(version, apiUrl, { ttlSeconds: cacheTtlSeconds, maxEntries: cacheMaxEntries });
+  }, [client, version, apiUrl, cacheTtlSeconds, cacheMaxEntries]);
 
   return <RocketFlagContext.Provider value={value}>{children}</RocketFlagContext.Provider>;
 };

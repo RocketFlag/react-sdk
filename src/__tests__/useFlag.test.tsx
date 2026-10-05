@@ -68,6 +68,27 @@ describe("useFlag", () => {
     expect(client.getFlag).toHaveBeenCalledWith("IFldMzqP5jtv9wAL", { cohort: "beta" }, undefined);
   });
 
+  it("passes the targeting key and audience attributes through to the client", async () => {
+    const client = makeClient(async () => FLAG);
+    const context = { targetingKey: "user-42", plan: "pro", country: "AU" };
+    renderHook(() => useFlag("IFldMzqP5jtv9wAL", context), { wrapper: wrapperWith(client) });
+
+    await waitFor(() => expect(client.getFlag).toHaveBeenCalled());
+    expect(client.getFlag).toHaveBeenCalledWith("IFldMzqP5jtv9wAL", context, undefined);
+  });
+
+  it("forwards cacheMaxEntries to the client it builds", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() =>
+      render(
+        <RocketFlagProvider cacheTtlSeconds={60} cacheMaxEntries={0}>
+          <span />
+        </RocketFlagProvider>,
+      ),
+    ).toThrow("maxEntries must be a positive integer");
+    spy.mockRestore();
+  });
+
   it("renders the resolved flag in a component", async () => {
     const client = makeClient(async () => FLAG);
     const Component = () => {
