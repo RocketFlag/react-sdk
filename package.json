@@ -1,6 +1,6 @@
 {
   "name": "@rocketflag/react-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "RocketFlag Developers (https://rocketflag.app)",
   "description": "The React SDK for the RocketFlag service.",
   "license": "MIT",

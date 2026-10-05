@@ -42,6 +42,7 @@ Provider props (all optional):
 | `version`         | API version segment (defaults to `v1`).                           |
 | `apiUrl`          | Base API URL (defaults to `https://api.rocketflag.app`).          |
 | `cacheTtlSeconds` | Default cache TTL in seconds, shared across all hooks. Omit to disable caching. |
+| `cacheMaxEntries` | Most responses the shared cache holds before evicting the least recently used (defaults to 10,000). |
 | `client`          | Inject a pre-built client (testing / advanced use).               |
 
 ### 2. Read a flag with the `useFlag` hook
@@ -93,8 +94,47 @@ context, so different cohorts/environments resolve independently.
 const { enabled } = useFlag("IFldMzqP5jtv9wAL", { cohort: "beta", env: "staging" });
 ```
 
-- `cohort`: `string | number | boolean` — cohort/variant identifier.
-- `env`: `string` — must be alphanumeric.
+- `cohort`: `string | number | boolean`, a cohort/variant identifier.
+- `env`: `string`, the environment of a group flag. Letters, numbers, hyphens
+  and underscores.
+
+### Sticky rollouts and audiences
+
+Pass a `targetingKey` to make percentage rollouts sticky, and any other keys as
+audience attributes, in the same context object:
+
+```tsx
+const { enabled } = useFlag("IFldMzqP5jtv9wAL", {
+  targetingKey: user.id,
+  plan: "pro",
+  country: "AU",
+});
+```
+
+- **`targetingKey`**: a stable identifier for the user. The same key always
+  gets the same answer from a percentage rollout, in every environment of a
+  group flag, and raising the percentage only ever adds users. Without a
+  `targetingKey` the `cohort` is used, and with neither each request is a fresh
+  random roll. The key is part of the request URL, which is visible in the
+  browser's network tab, so prefer an opaque id over an email address.
+- **Any other key** is an audience attribute, matched against the flag's
+  audience exactly and case-sensitively. An attribute you don't send never
+  matches. `cohort`, `env` and `targetingKey` are reserved and can't be
+  audience attributes.
+
+Every context value must be a `string`, `number` or `boolean`. Leave out an
+attribute you don't have rather than passing it as `undefined`. The
+`UserContext` type rejects a value that may be `undefined`, such as
+`{ plan: user.plan }`. TypeScript can't see through an optional property on an
+object you've typed yourself, so that case throws at runtime instead.
+
+```tsx
+import { useFlag, type UserContext } from "@rocketflag/react-sdk";
+
+const context: UserContext = { targetingKey: user.id };
+if (user.plan) context.plan = user.plan;
+const { enabled } = useFlag("IFldMzqP5jtv9wAL", context);
+```
 
 ### Per-call cache override
 
@@ -113,7 +153,7 @@ directly:
 ```ts
 import { createRocketflagClient } from "@rocketflag/react-sdk";
 
-const client = createRocketflagClient(); // (version?, apiUrl?, { ttlSeconds }?)
+const client = createRocketflagClient(); // (version?, apiUrl?, { ttlSeconds, maxEntries }?)
 const flag = await client.getFlag("IFldMzqP5jtv9wAL");
 ```
 
@@ -147,9 +187,8 @@ server-rendered apps without leaking requests onto the server.
 
 - Caching is **opt-in** — without `cacheTtlSeconds` (or a per-call `ttlSeconds`),
   every check hits the API.
-- The cache has no size cap and entries are only evicted when re-requested after
-  expiry. With high-cardinality contexts (e.g. per-user IDs), remount the
-  provider periodically to release memory.
+- Each distinct context is its own cache entry. The cache holds at most 10,000
+  entries (`cacheMaxEntries`) and evicts the least recently used one when full.
 - **No in-flight de-duplication:** two components requesting the same uncached
   flag in the same tick may each fire a request before the cache populates.
 - The API is one-flag-per-request, so this SDK offers `useFlag(id)` rather than a
