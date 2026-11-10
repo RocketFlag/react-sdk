@@ -172,6 +172,20 @@ describe("createRocketflagClient", () => {
     await expect(client.getFlag("")).rejects.toThrow(/flagId is required/);
   });
 
+  it.each([".", "..", "../admin", "a/b", "a\\b"])("rejects traversal or slash flagId %s", async (badId) => {
+    const client = createRocketflagClient();
+    await expect(client.getFlag(badId)).rejects.toThrow(/flagId must not contain path separators or relative segments/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("percent-encodes special characters in flagId", async () => {
+    fetchMock.mockResolvedValueOnce(okResponse(FLAG));
+    const client = createRocketflagClient();
+    await client.getFlag("flag#1?test");
+    const url = new URL(fetchMock.mock.calls[0][0]);
+    expect(url.pathname).toBe("/v1/flags/flag%231%3Ftest");
+  });
+
   describe("caching", () => {
     it("serves a cache hit within the TTL without a second fetch", async () => {
       fetchMock.mockResolvedValueOnce(okResponse(FLAG));

@@ -31,6 +31,9 @@ export const createRocketflagClient = (
     if (typeof flagId !== "string") {
       throw new Error("flagId must be a string");
     }
+    if (flagId === "." || flagId === ".." || /[\\/]/.test(flagId)) {
+      throw new Error("flagId must not contain path separators or relative segments");
+    }
     if (typeof userContext !== "object" || userContext === null) {
       throw new Error("userContext must be an object");
     }
@@ -45,7 +48,8 @@ export const createRocketflagClient = (
       }
     }
 
-    const url = new URL(`${apiUrl}/${version}/flags/${flagId}`);
+    const base = apiUrl.replace(/\/+$/, "");
+    const url = new URL(`${base}/${encodeURIComponent(version)}/flags/${encodeURIComponent(flagId)}`);
     Object.entries(userContext).forEach(([key, value]) => {
       url.searchParams.append(key, value.toString());
     });
